@@ -1,31 +1,33 @@
 package com.dudka.rich.streamingmusicplayer;
 
+import android.app.Activity;
 import android.content.Context;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-
-import org.json.JSONException;
-import org.json.JSONObject;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 
 /**
  * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link FragmentMusicPlayer.OnFragmentInteractionListener} interface
- * to handle interaction events.
  * Use the {@link FragmentMusicPlayer#newInstance} factory method to
  * create an instance of this fragment.
  */
 public class FragmentMusicPlayer extends Fragment {
 
-    JSONObject jsonObject;
+    String title;
+    String artist;
+    String mediaFile;
+    String coverImage;
 
-    private OnFragmentInteractionListener mListener;
+    Activity mActivity;
+    Context mContext;
 
     public FragmentMusicPlayer() {
         // Required empty public constructor
@@ -35,15 +37,13 @@ public class FragmentMusicPlayer extends Fragment {
      * Use this factory method to create a new instance of
      * this fragment using the provided parameters.
      *
-     * @param json JSONObject.
+     * @param bundle Bundle.
      * @return A new instance of fragment FragmentMusicPlayer.
      */
 
-    public static FragmentMusicPlayer newInstance(JSONObject json) {
+    public static FragmentMusicPlayer newInstance(Bundle bundle) {
         FragmentMusicPlayer fragment = new FragmentMusicPlayer();
-        Bundle args = new Bundle();
-        args.putString("json", json.toString());
-        fragment.setArguments(args);
+        fragment.setArguments(bundle);
         return fragment;
     }
 
@@ -51,58 +51,46 @@ public class FragmentMusicPlayer extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-            try {
-                jsonObject = new JSONObject(getArguments().getString("json"));
-                Log.v("Response", jsonObject.toString());
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+            Bundle bundle = getArguments();
+            title = bundle.getString("name");
+            artist = bundle.getString("artist_name");
+            mediaFile = bundle.getString("media_file");
+            coverImage = bundle.getString("cover_image");
         }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_music_player, container, false);
-    }
+        View view = inflater.inflate(R.layout.fragment_music_player, container, false);
 
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
+        //((ImageView)view.findViewById(R.id.cover_image)).setImageURI(Uri.parse(coverImage));
+        ((TextView)view.findViewById(R.id.title)).setText(title);
+        ((TextView)view.findViewById(R.id.artist)).setText(artist);
+
+        try {
+            MediaPlayer player = new MediaPlayer();
+            player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            player.setDataSource(mediaFile);
+            player.prepare();
+            player.start();
+        } catch (Exception e) {
+            // TODO: handle exception
         }
+
+        return view;
     }
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
-        }
+        mActivity = (Activity) context;
+        mContext = context;
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
-        mListener = null;
-    }
-
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     * <p/>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
-     */
-    public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
-        void onFragmentInteraction(Uri uri);
+        mActivity.finish();
     }
 }

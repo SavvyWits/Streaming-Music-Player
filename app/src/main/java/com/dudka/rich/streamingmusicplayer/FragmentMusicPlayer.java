@@ -1,5 +1,6 @@
 package com.dudka.rich.streamingmusicplayer;
 
+import android.app.Activity;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -11,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.facebook.drawee.view.SimpleDraweeView;
@@ -25,6 +27,7 @@ public class FragmentMusicPlayer extends Fragment
         MediaPlayer.OnErrorListener,
         MediaPlayer.OnCompletionListener {
 
+    int duration;
     String title;
     String artist;
     String mediaFile;
@@ -32,6 +35,7 @@ public class FragmentMusicPlayer extends Fragment
 
     MediaPlayer player = null;
 
+    Activity mActivity;
     OnFragmentInteractionListener mListener;
 
     private Handler repeatUpdateHandler = new Handler();
@@ -62,6 +66,7 @@ public class FragmentMusicPlayer extends Fragment
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             Bundle bundle = getArguments();
+            duration = bundle.getInt("duration");
             title = bundle.getString("name");
             artist = bundle.getString("artist_name");
             mediaFile = bundle.getString("media_file");
@@ -91,13 +96,16 @@ public class FragmentMusicPlayer extends Fragment
             mListener.handleNetworkError();
         }
 
-        view.findViewById(R.id.play).setOnClickListener(new View.OnClickListener() {
+        final ImageView play = (ImageView)view.findViewById(R.id.play);
+        play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(player.isPlaying()) {
+                if (player.isPlaying()) {
                     player.pause();
+                    play.setImageResource(R.drawable.media_playback_start);
                 } else {
                     player.start();
+                    play.setImageResource(R.drawable.media_playback_pause);
                 }
             }
         });
@@ -163,13 +171,15 @@ public class FragmentMusicPlayer extends Fragment
             throw new RuntimeException(context.toString()
                     + " must implement OnFragmentInteractionListener");
         }
+        mActivity = (Activity)context;
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        player.stop();
-        player.release();
+        if(player != null) {
+            player.release();
+        }
         mListener.handleFinish();
     }
 
@@ -180,6 +190,8 @@ public class FragmentMusicPlayer extends Fragment
 
     @Override
     public void onPrepared(MediaPlayer mp) {
+        mActivity.findViewById(R.id.preparing_progress).setVisibility(View.GONE);
+        mActivity.findViewById(R.id.player_controls).setVisibility(View.VISIBLE);
         mp.start();
     }
 
@@ -195,16 +207,18 @@ public class FragmentMusicPlayer extends Fragment
     public void onCompletion(MediaPlayer mp) {
         mp.stop();
         mp.release();
-        mListener.handleVolley();
+        mListener.handleFinish();
     }
 
     private class RptUpdater implements Runnable {
         public void run() {
-            if( mAutoIncrement ){
+            if(mAutoIncrement) {
                 mValue += 100; //change this value to control how much to forward
-                player.seekTo(player.getCurrentPosition() + mValue);
-                repeatUpdateHandler.postDelayed( new RptUpdater(), 50 );
-            } else if( mAutoDecrement ){
+                if(mValue < duration - player.getCurrentPosition()) {
+                    player.seekTo(player.getCurrentPosition() + mValue);
+                    repeatUpdateHandler.postDelayed(new RptUpdater(), 50);
+                }
+            } else if(mAutoDecrement) {
                 mValue -= 100; //change this value to control how much to rewind
                 if(mValue <= 0)
                     mValue = 0;

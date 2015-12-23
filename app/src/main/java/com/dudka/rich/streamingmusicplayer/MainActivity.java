@@ -62,12 +62,18 @@ public class MainActivity extends AppCompatActivity implements OnFragmentInterac
                             e.printStackTrace();
                         }
                         try {
+                            bundle.putInt("duration", response.getInt("duration"));
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        try {
                             bundle.putString("cover_image", response.getString("cover_image"));
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
 
                         progressBar.setVisibility(View.GONE);
+
                         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
                         ft.add(R.id.fragment_container, FragmentMusicPlayer.newInstance(bundle));
                         ft.commit();

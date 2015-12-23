@@ -38,7 +38,7 @@ public class FragmentMusicPlayer extends Fragment
     Activity mActivity;
     OnFragmentInteractionListener mListener;
 
-    private Handler repeatUpdateHandler = new Handler();
+    private Handler seekHandler = new Handler();
     public int mValue;           //increment
     private boolean mAutoIncrement = false;          //for fast foward in real time
     private boolean mAutoDecrement = false;         // for rewind in real time
@@ -116,7 +116,7 @@ public class FragmentMusicPlayer extends Fragment
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     v.setPressed(true);
                     mAutoDecrement = true;
-                    repeatUpdateHandler.post(new RptUpdater());
+                    seekHandler.post(new SeekUpdater());
                     return false;
                 } else if (event.getAction() == MotionEvent.ACTION_UP) {
                     v.setPressed(false);
@@ -136,7 +136,7 @@ public class FragmentMusicPlayer extends Fragment
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     v.setPressed(true);
                     mAutoIncrement = true;
-                    repeatUpdateHandler.post(new RptUpdater());
+                    seekHandler.post(new SeekUpdater());
                     return false;
                 } else if (event.getAction() == MotionEvent.ACTION_UP) {
                     v.setPressed(false);
@@ -207,23 +207,27 @@ public class FragmentMusicPlayer extends Fragment
     public void onCompletion(MediaPlayer mp) {
         mp.stop();
         mp.release();
-        mListener.handleFinish();
+        mListener.handleVolley();
     }
 
-    private class RptUpdater implements Runnable {
+    private class SeekUpdater implements Runnable {
         public void run() {
             if(mAutoIncrement) {
                 mValue += 100; //change this value to control how much to forward
                 if(mValue < duration - player.getCurrentPosition()) {
                     player.seekTo(player.getCurrentPosition() + mValue);
-                    repeatUpdateHandler.postDelayed(new RptUpdater(), 50);
+                    seekHandler.postDelayed(new SeekUpdater(), 50);
+                } else {
+                    player.seekTo(duration);
                 }
             } else if(mAutoDecrement) {
                 mValue -= 100; //change this value to control how much to rewind
-                if(mValue <= 0)
-                    mValue = 0;
-                player.seekTo(player.getCurrentPosition() - mValue);
-                repeatUpdateHandler.postDelayed( new RptUpdater(), 50 );
+                if(mValue > 0) {
+                    player.seekTo(player.getCurrentPosition() - mValue);
+                    seekHandler.postDelayed(new SeekUpdater(), 50);
+                } else {
+                    player.seekTo(0);
+                }
             }
         }
     }

@@ -20,7 +20,7 @@ import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity implements OnFragmentInteractionListener {
 
-    String url = "http://streaming.earbits.com/api/v1/track.json?stream_id=5654d7c3c5aa6e00030021aa";
+    String url = "YOUR END POINT GOES HERE";
     View progressBar;
 
     @Override

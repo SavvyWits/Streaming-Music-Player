@@ -8,4 +8,7 @@
     <string name="unkown_artist">Unknown artist name</string>
     <string name="album_cover_description">Album Cover</string>
     <string name="preparing_your_song">Preparing you song...</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

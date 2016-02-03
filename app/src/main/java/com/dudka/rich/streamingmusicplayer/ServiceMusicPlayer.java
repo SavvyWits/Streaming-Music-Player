@@ -88,6 +88,7 @@ public class ServiceMusicPlayer extends Service
         Intent intent = new Intent(MainActivity.INTENT_FILTER);
         intent.putExtra(MainActivity.PLAYER_EVENT_MESSAGE, MainActivity.PLAYER_COMPLETION);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        stopSelf();
     }
 
     @Override
@@ -97,6 +98,7 @@ public class ServiceMusicPlayer extends Service
         Intent intent = new Intent(MainActivity.INTENT_FILTER);
         intent.putExtra(MainActivity.PLAYER_EVENT_MESSAGE, MainActivity.PLAYER_ERROR);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        stopSelf();
         return false;
     }
 

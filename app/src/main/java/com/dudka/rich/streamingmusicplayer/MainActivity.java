@@ -91,20 +91,44 @@ public class MainActivity extends AppCompatActivity
             musicPlayerUI = (FragmentMusicPlayerUI) fm.findFragmentByTag(fragmentTag);
         }
 
-        boolean changingConfig = PreferenceManager.getDefaultSharedPreferences(this)
-                .getBoolean(IS_CHANGING_CONFIGURATIONS, false);
+        boolean changingConfig = false;
+
+        if(savedInstanceState != null)
+            changingConfig = savedInstanceState.getBoolean(IS_CHANGING_CONFIGURATIONS);
 
         Log.d("MediaPlayer", "" + changingConfig);
 
         if(!changingConfig)
             handleVolley();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if(isChangingConfigurations()) {
+            outState.putBoolean(IS_CHANGING_CONFIGURATIONS, true);
+        } else {
+            outState.putBoolean(IS_CHANGING_CONFIGURATIONS, false);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
 
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(INTENT_FILTER));
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
     }
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.d("MediaPlayer", "Broadcast Received");
             int event = intent.getIntExtra(PLAYER_EVENT_MESSAGE, 0);
             switch(event) {
                 case PLAYER_COMPLETION:
@@ -304,16 +328,14 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onDestroy() {
         super.onDestroy();
-        PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .putBoolean(IS_CHANGING_CONFIGURATIONS, isChangingConfigurations()).apply();
-        doBindService();
+        /*doBindService();
         Message msg = Message.obtain(null, ServiceMusicPlayer.STOP);
         try {
             mService.send(msg);
         } catch(RemoteException e) {
             e.printStackTrace();
         }
-        doUnbindService();
+        doUnbindService();*/
     }
 
     void doBindService() {

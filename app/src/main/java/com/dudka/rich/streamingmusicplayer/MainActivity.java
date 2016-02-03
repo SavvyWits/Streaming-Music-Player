@@ -219,6 +219,14 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void handleFinish() {
+        doBindService();
+        Message msg = Message.obtain(null, ServiceMusicPlayer.STOP);
+        try {
+            mService.send(msg);
+        } catch(RemoteException e) {
+            e.printStackTrace();
+        }
+        doUnbindService();
         finish();
     }
 
@@ -298,6 +306,14 @@ public class MainActivity extends AppCompatActivity
         super.onDestroy();
         PreferenceManager.getDefaultSharedPreferences(this).edit()
                 .putBoolean(IS_CHANGING_CONFIGURATIONS, isChangingConfigurations()).apply();
+        doBindService();
+        Message msg = Message.obtain(null, ServiceMusicPlayer.STOP);
+        try {
+            mService.send(msg);
+        } catch(RemoteException e) {
+            e.printStackTrace();
+        }
+        doUnbindService();
     }
 
     void doBindService() {

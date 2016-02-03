@@ -22,6 +22,7 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.support.v4.content.LocalBroadcastManager;
@@ -42,7 +43,6 @@ public class ServiceMusicPlayer extends Service
 
     @Override
     public void onCreate() {
-
     }
 
     @Override
@@ -57,7 +57,6 @@ public class ServiceMusicPlayer extends Service
             player.setOnPreparedListener(this);
             player.prepareAsync();
             player.setOnErrorListener(this);
-            player.setOnCompletionListener(this);
         } catch (Exception e) {
             e.printStackTrace();
             //mListener.handleNetworkError();
@@ -79,10 +78,12 @@ public class ServiceMusicPlayer extends Service
     public void onPrepared(MediaPlayer mp) {
         Log.d("MediaPlayer", "onPrepared");
         mp.start();
+        mp.setOnCompletionListener(this);
     }
 
     @Override
     public void onCompletion(MediaPlayer mp) {
+        Log.d("MediaPlayer", "onCompletion");
         mp.stop();
         mp.release();
         Intent intent = new Intent(MainActivity.INTENT_FILTER);
@@ -93,6 +94,7 @@ public class ServiceMusicPlayer extends Service
 
     @Override
     public boolean onError(MediaPlayer mp, int what, int extra) {
+        mp.reset();
         mp.stop();
         mp.release();
         Intent intent = new Intent(MainActivity.INTENT_FILTER);
@@ -125,5 +127,12 @@ public class ServiceMusicPlayer extends Service
                     super.handleMessage(msg);
             }
         }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if(player != null)
+            player.release();
     }
 }

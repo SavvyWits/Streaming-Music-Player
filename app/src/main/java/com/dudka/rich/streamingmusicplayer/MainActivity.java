@@ -17,16 +17,9 @@
 package com.dudka.rich.streamingmusicplayer;
 
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
-import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
-import android.os.RemoteException;
-import android.preference.PreferenceManager;
 import android.support.v4.app.FragmentManager;
 import android.content.DialogInterface;
 import android.support.v4.app.FragmentTransaction;
@@ -54,10 +47,11 @@ import org.json.JSONObject;
 public class MainActivity extends AppCompatActivity
         implements FragmentMusicPlayerUI.OnFragmentInteractionListener {
 
-    public static final String INTENT_FILTER = "com.dudka.rich.streamingmusicplayer.localbroadcast";
-    public static final String PLAYER_EVENT_MESSAGE = "playerEventMessage";
-    public static final int PLAYER_COMPLETION = 0x0;
-    public static final int PLAYER_ERROR = 0x1;
+    public static final String INTENT_FILTER = "com.dudka.rich.streamingmusicplayer.localbroadcast.activity";
+    public static final String ACTIVITY_EVENT_MESSAGE = "activityEventMessage";
+    public static final int PLAYER_STARTED = 0x0;
+    public static final int PLAYER_COMPLETED = 0x1;
+    public static final int PLAYER_ERROR = 0x2;
 
     private static final String IS_CHANGING_CONFIGURATIONS = "isChangingConfigurations";
 
@@ -65,12 +59,12 @@ public class MainActivity extends AppCompatActivity
     String url = "http://streaming.earbits.com/api/v1/track.json?stream_id=5654d7c3c5aa6e00030021aa";
     String fragmentTag = "fragmentMusicPlayerUI";
 
+    boolean isPlaying = false;
+
+    JSONObject mResponse;
     View progressBar;
 
     FragmentMusicPlayerUI musicPlayerUI;
-
-    Messenger mService = null;
-    boolean mBound;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,9 +79,10 @@ public class MainActivity extends AppCompatActivity
         musicPlayerUI = (FragmentMusicPlayerUI) fm.findFragmentByTag(fragmentTag);
 
         if (musicPlayerUI == null) {
-            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+            FragmentTransaction ft = fm.beginTransaction();
             ft.add(R.id.fragment_container, FragmentMusicPlayerUI.newInstance(), fragmentTag);
             ft.commit();
+            fm.executePendingTransactions();
             musicPlayerUI = (FragmentMusicPlayerUI) fm.findFragmentByTag(fragmentTag);
         }
 
@@ -95,8 +90,6 @@ public class MainActivity extends AppCompatActivity
 
         if(savedInstanceState != null)
             changingConfig = savedInstanceState.getBoolean(IS_CHANGING_CONFIGURATIONS);
-
-        Log.d("MediaPlayer", "" + changingConfig);
 
         if(!changingConfig)
             handleVolley();
@@ -115,7 +108,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onResume() {
         super.onResume();
-
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(INTENT_FILTER));
     }
 
@@ -128,10 +120,32 @@ public class MainActivity extends AppCompatActivity
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.d("MediaPlayer", "Broadcast Received");
-            int event = intent.getIntExtra(PLAYER_EVENT_MESSAGE, 0);
+            int event = intent.getIntExtra(ServiceMusicPlayer.SERVICE_EVENT_MESSAGE, 0);
             switch(event) {
-                case PLAYER_COMPLETION:
+                case PLAYER_STARTED:
+                    String songName;
+                    String artistName;
+                    String coverImage = null;
+                    try {
+                        songName = mResponse.getString("name");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        songName = getString(R.string.unknown_name);
+                    }
+                    try {
+                        artistName = mResponse.getString("artist_name");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        artistName = getString(R.string.unkown_artist);
+                    }
+                    try {
+                        coverImage = mResponse.getString("cover_image");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    musicPlayerUI.notifyUIUpdate(songName, artistName, coverImage);
+                    break;
+                case PLAYER_COMPLETED:
                     handleVolley();
                     break;
                 case PLAYER_ERROR:
@@ -143,20 +157,6 @@ public class MainActivity extends AppCompatActivity
         }
     };
 
-    private ServiceConnection mConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            mService = new Messenger(service);
-            mBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            mService = null;
-            mBound = false;
-        }
-    };
-
     @Override
     public void handleVolley() {
 
@@ -165,29 +165,9 @@ public class MainActivity extends AppCompatActivity
 
                     @Override
                     public void onResponse(JSONObject response) {
-                        Log.d("Volley Response", response.toString());
-                        String songName;
-                        String artistName;
-                        String coverImage = null;
+                        mResponse = response;
                         String mediaFile = null;
                         int duration = 0;
-                        try {
-                            songName = response.getString("name");
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            songName = getString(R.string.unknown_name);
-                        }
-                        try {
-                            artistName = response.getString("artist_name");
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            artistName = getString(R.string.unkown_artist);
-                        }
-                        try {
-                            coverImage = response.getString("cover_image");
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
                         try {
                             mediaFile = response.getString("media_file");
                         } catch (JSONException e) {
@@ -199,12 +179,12 @@ public class MainActivity extends AppCompatActivity
                             e.printStackTrace();
                         }
 
-                        //musicPlayerUI.notifyUIUpdate(songName, artistName, coverImage);
-
                         Intent intent = new Intent(getApplicationContext(), ServiceMusicPlayer.class);
                         intent.putExtra("media_file", mediaFile);
                         intent.putExtra("duration", duration);
-                        startService(intent);//, mConnection, Context.BIND_AUTO_CREATE);
+                        startService(intent);
+
+                        isPlaying = true;
 
                         progressBar.setVisibility(View.GONE);
                     }
@@ -239,79 +219,37 @@ public class MainActivity extends AppCompatActivity
             }
         });
         alert.show();
+
+        isPlaying = false;
     }
 
     @Override
     public void handleFinish() {
-        doBindService();
-        Message msg = Message.obtain(null, ServiceMusicPlayer.STOP);
-        try {
-            mService.send(msg);
-        } catch(RemoteException e) {
-            e.printStackTrace();
-        }
-        doUnbindService();
+        sendLocalBroadcast(ServiceMusicPlayer.STOP);
         finish();
     }
 
     @Override
-    public void handlePlay() {
-        doBindService();
-        Message msg = Message.obtain(null, ServiceMusicPlayer.PLAY);
-        try {
-            mService.send(msg);
-        } catch (RemoteException e) {
-            e.printStackTrace();
+    public void handlePlayButton() {
+        if (isPlaying) {
+            sendLocalBroadcast(ServiceMusicPlayer.PAUSE);
+            musicPlayerUI.setPlayButton();
+            isPlaying = false;
+        } else {
+            sendLocalBroadcast(ServiceMusicPlayer.PLAY);
+            musicPlayerUI.setPauseButton();
+            isPlaying = true;
         }
-        doUnbindService();
-    }
-
-    @Override
-    public void handlePause() {
-        doBindService();
-        Message msg = Message.obtain(null, ServiceMusicPlayer.PAUSE);
-        try {
-            mService.send(msg);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-        doUnbindService();
-    }
-
-    @Override
-    public void handleStop() {
-        doBindService();
-        Message msg = Message.obtain(null, ServiceMusicPlayer.STOP);
-        try {
-            mService.send(msg);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-        doUnbindService();
     }
 
     @Override
     public void handleForward() {
-        doBindService();
-        Message msg = Message.obtain(null, ServiceMusicPlayer.FORWARD);
-        try {
-            mService.send(msg);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-        doUnbindService();
+        sendLocalBroadcast(ServiceMusicPlayer.FORWARD);
     }
 
     @Override
     public void handleBack() {
-        doBindService();
-        Message msg = Message.obtain(null, ServiceMusicPlayer.BACK);
-        try {
-            mService.send(msg);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-        doUnbindService();
+        sendLocalBroadcast(ServiceMusicPlayer.BACK);
     }
 
     @Override
@@ -322,33 +260,17 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onStop() {
         super.onStop();
-        doUnbindService();
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        /*doBindService();
-        Message msg = Message.obtain(null, ServiceMusicPlayer.STOP);
-        try {
-            mService.send(msg);
-        } catch(RemoteException e) {
-            e.printStackTrace();
-        }
-        doUnbindService();*/
+        sendLocalBroadcast(ServiceMusicPlayer.STOP);
     }
 
-    void doBindService() {
-        bindService(new Intent(MainActivity.this,
-                ServiceMusicPlayer.class), mConnection, Context.BIND_AUTO_CREATE);
-        mBound = true;
-    }
-
-    void doUnbindService() {
-        if (mBound) {
-            // Detach our existing connection.
-            unbindService(mConnection);
-            mBound = false;
-        }
+    private void sendLocalBroadcast(int msg) {
+        Intent intent = new Intent(ServiceMusicPlayer.INTENT_FILTER);
+        intent.putExtra(ACTIVITY_EVENT_MESSAGE, msg);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 }

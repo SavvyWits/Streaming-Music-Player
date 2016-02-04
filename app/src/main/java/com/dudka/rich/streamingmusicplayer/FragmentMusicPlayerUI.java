@@ -45,6 +45,8 @@ public class FragmentMusicPlayerUI extends Fragment {
     Activity mActivity;
     OnFragmentInteractionListener mListener;
 
+    ImageView playButton;
+
     private Handler seekHandler = new Handler();
     public int mValue;           //increment
     private boolean mAutoIncrement = false;          //for fast foward in real time
@@ -75,17 +77,11 @@ public class FragmentMusicPlayerUI extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_music_player, container, false);
 
-        final ImageView play = (ImageView)view.findViewById(R.id.play);
-        play.setOnClickListener(new View.OnClickListener() {
+        playButton = (ImageView)view.findViewById(R.id.play);
+        playButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                /*if (player.isPlaying()) {
-                    player.pause();
-                    play.setImageResource(R.drawable.media_playback_start);
-                } else {
-                    player.start();
-                    play.setImageResource(R.drawable.media_playback_pause);
-                }*/
+                mListener.handlePlayButton();
             }
         });
 
@@ -132,8 +128,6 @@ public class FragmentMusicPlayerUI extends Fragment {
         view.findViewById(R.id.quit).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //player.stop();
-                //player.release();
                 mListener.handleFinish();
             }
         });
@@ -169,6 +163,14 @@ public class FragmentMusicPlayerUI extends Fragment {
         ((SimpleDraweeView)mActivity.findViewById(R.id.cover_image)).setImageURI(Uri.parse(coverImage));
     }
 
+    public void setPlayButton() {
+        playButton.setImageResource(R.drawable.media_playback_start);
+    }
+
+    public void setPauseButton() {
+        playButton.setImageResource(R.drawable.media_playback_pause);
+    }
+
     /*private class SeekUpdater implements Runnable {
         public void run() {
             if(mAutoIncrement) {
@@ -195,9 +197,7 @@ public class FragmentMusicPlayerUI extends Fragment {
         void handleVolley();
         void handleNetworkError();
         void handleFinish();
-        void handlePlay();
-        void handlePause();
-        void handleStop();
+        void handlePlayButton();
         void handleForward();
         void handleBack();
     }

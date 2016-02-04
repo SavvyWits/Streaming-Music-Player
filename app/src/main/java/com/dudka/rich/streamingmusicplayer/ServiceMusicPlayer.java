@@ -17,14 +17,14 @@
 package com.dudka.rich.streamingmusicplayer;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
-import android.os.Messenger;
+import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
@@ -33,6 +33,8 @@ public class ServiceMusicPlayer extends Service
         MediaPlayer.OnErrorListener,
         MediaPlayer.OnCompletionListener {
 
+    public static final String INTENT_FILTER = "com.dudka.rich.streamingmusicplayer.localbroadcast.service";
+    public static final String SERVICE_EVENT_MESSAGE = "serviceEventMessage";
     public static final int PLAY = 0x0;
     public static final int PAUSE = 0x1;
     public static final int STOP = 0x2;
@@ -43,13 +45,12 @@ public class ServiceMusicPlayer extends Service
 
     @Override
     public void onCreate() {
+        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(INTENT_FILTER));
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startID) {
         String mediaFile = intent.getStringExtra("media_file");
-        Log.d("MediaPlayer", "Media File = " + mediaFile);
-
         try {
             player = new MediaPlayer();
             player.setAudioStreamType(AudioManager.STREAM_MUSIC);
@@ -59,36 +60,61 @@ public class ServiceMusicPlayer extends Service
             player.setOnErrorListener(this);
         } catch (Exception e) {
             e.printStackTrace();
-            //mListener.handleNetworkError();
+            sendLocalBroadcast(MainActivity.PLAYER_ERROR);
         }
         return START_STICKY;
     }
 
-    public ServiceMusicPlayer() {
-    }
+    public ServiceMusicPlayer() {}
 
-    final Messenger mMessenger = new Messenger(new IncomingHandler());
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return mMessenger.getBinder();
-    }
+    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int event = intent.getIntExtra(MainActivity.ACTIVITY_EVENT_MESSAGE, 0);
+            switch(event) {
+                case PLAY:
+                    if(player != null) {
+                        player.start();
+                    }
+                    break;
+                case PAUSE:
+                    if(player !=null) {
+                        player.pause();
+                    }
+                    break;
+                case STOP:
+                    if(player != null) {
+                        player.stop();
+                        player.release();
+                    }
+                    stopSelf();
+                    break;
+                case FORWARD:
+                    break;
+                case BACK:
+                    break;
+                default:
+                    if(player != null) {
+                        player.stop();
+                        player.release();
+                    }
+                    stopSelf();
+            }
+        }
+    };
 
     @Override
     public void onPrepared(MediaPlayer mp) {
-        Log.d("MediaPlayer", "onPrepared");
         mp.start();
         mp.setOnCompletionListener(this);
+        sendLocalBroadcast(MainActivity.PLAYER_STARTED);
     }
 
     @Override
     public void onCompletion(MediaPlayer mp) {
-        Log.d("MediaPlayer", "onCompletion");
         mp.stop();
         mp.release();
-        Intent intent = new Intent(MainActivity.INTENT_FILTER);
-        intent.putExtra(MainActivity.PLAYER_EVENT_MESSAGE, MainActivity.PLAYER_COMPLETION);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        sendLocalBroadcast(MainActivity.PLAYER_COMPLETED);
         stopSelf();
     }
 
@@ -97,36 +123,15 @@ public class ServiceMusicPlayer extends Service
         mp.reset();
         mp.stop();
         mp.release();
-        Intent intent = new Intent(MainActivity.INTENT_FILTER);
-        intent.putExtra(MainActivity.PLAYER_EVENT_MESSAGE, MainActivity.PLAYER_ERROR);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        sendLocalBroadcast(MainActivity.PLAYER_ERROR);
         stopSelf();
         return false;
     }
 
-    class IncomingHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case PLAY:
-                    player.start();
-                    break;
-                case PAUSE:
-                    player.pause();
-                    break;
-                case STOP:
-                    player.stop();
-                    player.release();
-                    stopSelf();
-                    break;
-                case FORWARD:
-                    break;
-                case BACK:
-                    break;
-                default:
-                    super.handleMessage(msg);
-            }
-        }
+    private void sendLocalBroadcast(int msg) {
+        Intent intent = new Intent(MainActivity.INTENT_FILTER);
+        intent.putExtra(SERVICE_EVENT_MESSAGE, msg);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
     @Override
@@ -134,5 +139,12 @@ public class ServiceMusicPlayer extends Service
         super.onDestroy();
         if(player != null)
             player.release();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
+    }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
     }
 }

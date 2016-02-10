@@ -27,7 +27,6 @@ import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 
 import com.android.volley.Request;
@@ -44,7 +43,7 @@ import org.json.JSONObject;
 /**
  * Created by Rich Dudka on 12/22/15.
  *
- * This activity acts as the controllerand model of the application.
+ * This activity acts as the controller and model of the application.
  */
 public class MainActivity extends AppCompatActivity
         implements FragmentMusicPlayerUI.OnFragmentInteractionListener {
@@ -66,7 +65,6 @@ public class MainActivity extends AppCompatActivity
     String artistName;
     String coverImage = null;
 
-    JSONObject mResponse;
     View progressBar;
 
     FragmentMusicPlayerUI musicPlayerUI;
@@ -124,7 +122,6 @@ public class MainActivity extends AppCompatActivity
         super.onResume();
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(INTENT_FILTER));
         musicPlayerUI.hidePlayerControls();
-        Log.d("Is Playing", "" + isPlaying);
         if(isPlaying) {
             musicPlayerUI.showPlayerControls();
             musicPlayerUI.populateSongInfo(songName, artistName, coverImage);
@@ -143,30 +140,16 @@ public class MainActivity extends AppCompatActivity
             int event = intent.getIntExtra(ServiceMusicPlayer.SERVICE_EVENT_MESSAGE, 0);
             switch(event) {
                 case PLAYER_STARTED:
-                    try {
-                        songName = mResponse.getString("name");
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        songName = getString(R.string.unknown_name);
-                    }
-                    try {
-                        artistName = mResponse.getString("artist_name");
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        artistName = getString(R.string.unkown_artist);
-                    }
-                    try {
-                        coverImage = mResponse.getString("cover_image");
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
+                    isPlaying = true;
                     musicPlayerUI.populateSongInfo(songName, artistName, coverImage);
                     musicPlayerUI.showPlayerControls();
                     break;
                 case PLAYER_COMPLETED:
+                    isPlaying = false;
                     handleVolley();
                     break;
                 case PLAYER_ERROR:
+                    isPlaying = false;
                     handleNetworkError();
                     break;
                 default:
@@ -183,9 +166,26 @@ public class MainActivity extends AppCompatActivity
 
                     @Override
                     public void onResponse(JSONObject response) {
-                        mResponse = response;
                         String mediaFile = null;
                         int duration = 0;
+                        try {
+                            songName = response.getString("name");
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            songName = getString(R.string.unknown_name);
+                        }
+                        try {
+                            artistName = response.getString("artist_name");
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            artistName = getString(R.string.unkown_artist);
+                        }
+                        try {
+                            coverImage = response.getString("cover_image");
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
                         try {
                             mediaFile = response.getString("media_file");
                         } catch (JSONException e) {
@@ -201,8 +201,6 @@ public class MainActivity extends AppCompatActivity
                         intent.putExtra("media_file", mediaFile);
                         intent.putExtra("duration", duration);
                         startService(intent);
-
-                        isPlaying = true;
 
                         progressBar.setVisibility(View.GONE);
                     }
@@ -237,8 +235,6 @@ public class MainActivity extends AppCompatActivity
             }
         });
         alert.show();
-
-        isPlaying = false;
     }
 
     @Override

@@ -63,13 +63,6 @@ public class FragmentMusicPlayerUI extends Fragment {
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        setRetainInstance(true);
-    }
-
-    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
@@ -88,11 +81,9 @@ public class FragmentMusicPlayerUI extends Fragment {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    v.setPressed(true);
                     mListener.startSeek();
                     return true;
                 } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
-                    v.setPressed(false);
                     mListener.stopSeekBack();
                 }
                 return false;
@@ -103,11 +94,9 @@ public class FragmentMusicPlayerUI extends Fragment {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    v.setPressed(true);
                     mListener.startSeek();
                     return true;
                 } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
-                    v.setPressed(false);
                     mListener.stopSeekForward();
                 }
                 return false;

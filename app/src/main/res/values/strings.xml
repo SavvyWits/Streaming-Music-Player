@@ -2,13 +2,10 @@
     <string name="app_name">Streaming Music Player</string>
     <string name="network_error_title">Network Error</string>
     <string name="network_error_message">Whoops. Something\'s not right.</string>
-    <string name="retry">Re-try</string>
+    <string name="retry">Retry</string>
     <string name="quit">Quit</string>
     <string name="unknown_name">Unknown song name</string>
     <string name="unkown_artist">Unknown artist name</string>
     <string name="album_cover_description">Album Cover</string>
-    <string name="preparing_your_song">Preparing your song...</string>
-
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="preparing_your_song">Preparing your song…</string>
 </resources>

@@ -18,11 +18,8 @@ package com.dudka.rich.streamingmusicplayer;
 
 import android.app.Activity;
 import android.content.Context;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -47,11 +44,6 @@ public class FragmentMusicPlayerUI extends Fragment {
 
     ImageView playButton;
 
-    private Handler seekHandler = new Handler();
-    public int mValue;           //increment
-    private boolean mAutoIncrement = false;          //for fast foward in real time
-    private boolean mAutoDecrement = false;         // for rewind in real time
-
     public FragmentMusicPlayerUI() {
         // Required empty public constructor
     }
@@ -71,6 +63,13 @@ public class FragmentMusicPlayerUI extends Fragment {
     }
 
     @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        setRetainInstance(true);
+    }
+
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
@@ -81,7 +80,7 @@ public class FragmentMusicPlayerUI extends Fragment {
         playButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mListener.handlePlayButton();
+                mListener.togglePlayButton();
             }
         });
 
@@ -90,16 +89,11 @@ public class FragmentMusicPlayerUI extends Fragment {
             public boolean onTouch(View v, MotionEvent event) {
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     v.setPressed(true);
-                    mAutoDecrement = true;
-                    //seekHandler.post(new SeekUpdater());
-                    return false;
-                } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                    mListener.startSeek();
+                    return true;
+                } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
                     v.setPressed(false);
-                    if ((event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL)
-                            && mAutoDecrement) {
-                        mAutoDecrement = false;
-                    }
-                    return false;
+                    mListener.stopSeekBack();
                 }
                 return false;
             }
@@ -110,16 +104,11 @@ public class FragmentMusicPlayerUI extends Fragment {
             public boolean onTouch(View v, MotionEvent event) {
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     v.setPressed(true);
-                    mAutoIncrement = true;
-                    //seekHandler.post(new SeekUpdater());
-                    return false;
-                } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                    mListener.startSeek();
+                    return true;
+                } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
                     v.setPressed(false);
-                    if ((event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL)
-                            && mAutoIncrement) {
-                        mAutoIncrement = false;
-                    }
-                    return false;
+                    mListener.stopSeekForward();
                 }
                 return false;
             }
@@ -154,13 +143,20 @@ public class FragmentMusicPlayerUI extends Fragment {
         mActivity = null;
     }
 
-    public void notifyUIUpdate(String title, String artist, String coverImage) {
-        mActivity.findViewById(R.id.preparing_progress).setVisibility(View.GONE);
-        mActivity.findViewById(R.id.player_controls).setVisibility(View.VISIBLE);
-
+    public void populateSongInfo(String title, String artist, String coverImage) {
         ((TextView)mActivity.findViewById(R.id.title)).setText(title);
         ((TextView)mActivity.findViewById(R.id.artist)).setText(artist);
         ((SimpleDraweeView)mActivity.findViewById(R.id.cover_image)).setImageURI(Uri.parse(coverImage));
+    }
+
+    public void hidePlayerControls() {
+        mActivity.findViewById(R.id.preparing_progress).setVisibility(View.VISIBLE);
+        mActivity.findViewById(R.id.player_controls).setVisibility(View.GONE);
+    }
+
+    public void showPlayerControls() {
+        mActivity.findViewById(R.id.preparing_progress).setVisibility(View.GONE);
+        mActivity.findViewById(R.id.player_controls).setVisibility(View.VISIBLE);
     }
 
     public void setPlayButton() {
@@ -171,34 +167,13 @@ public class FragmentMusicPlayerUI extends Fragment {
         playButton.setImageResource(R.drawable.media_playback_pause);
     }
 
-    /*private class SeekUpdater implements Runnable {
-        public void run() {
-            if(mAutoIncrement) {
-                mValue += 100; //change this value to control how much to forward
-                if(mValue < duration - player.getCurrentPosition()) {
-                    player.seekTo(player.getCurrentPosition() + mValue);
-                    seekHandler.postDelayed(new SeekUpdater(), 50);
-                } else {
-                    player.seekTo(duration);
-                }
-            } else if(mAutoDecrement) {
-                mValue -= 100; //change this value to control how much to rewind
-                if(mValue > 0) {
-                    player.seekTo(player.getCurrentPosition() - mValue);
-                    seekHandler.postDelayed(new SeekUpdater(), 50);
-                } else {
-                    player.seekTo(0);
-                }
-            }
-        }
-    }*/
-
     public interface OnFragmentInteractionListener {
         void handleVolley();
         void handleNetworkError();
         void handleFinish();
-        void handlePlayButton();
-        void handleForward();
-        void handleBack();
+        void togglePlayButton();
+        void startSeek();
+        void stopSeekForward();
+        void stopSeekBack();
     }
 }

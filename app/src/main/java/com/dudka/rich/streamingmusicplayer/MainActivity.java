@@ -43,6 +43,8 @@ import org.json.JSONObject;
 
 /**
  * Created by Rich Dudka on 12/22/15.
+ *
+ * This activity acts as the controllerand model of the application.
  */
 public class MainActivity extends AppCompatActivity
         implements FragmentMusicPlayerUI.OnFragmentInteractionListener {
@@ -60,6 +62,9 @@ public class MainActivity extends AppCompatActivity
     String fragmentTag = "fragmentMusicPlayerUI";
 
     boolean isPlaying = false;
+    String songName;
+    String artistName;
+    String coverImage = null;
 
     JSONObject mResponse;
     View progressBar;
@@ -78,7 +83,7 @@ public class MainActivity extends AppCompatActivity
         FragmentManager fm = getSupportFragmentManager();
         musicPlayerUI = (FragmentMusicPlayerUI) fm.findFragmentByTag(fragmentTag);
 
-        if (musicPlayerUI == null) {
+        if (savedInstanceState == null) {
             FragmentTransaction ft = fm.beginTransaction();
             ft.add(R.id.fragment_container, FragmentMusicPlayerUI.newInstance(), fragmentTag);
             ft.commit();
@@ -88,8 +93,13 @@ public class MainActivity extends AppCompatActivity
 
         boolean changingConfig = false;
 
-        if(savedInstanceState != null)
+        if(savedInstanceState != null) {
             changingConfig = savedInstanceState.getBoolean(IS_CHANGING_CONFIGURATIONS);
+            isPlaying = savedInstanceState.getBoolean("isPlaying");
+            songName = savedInstanceState.getString("songName");
+            artistName = savedInstanceState.getString("artistName", artistName);
+            coverImage = savedInstanceState.getString("coverImage", coverImage);
+        }
 
         if(!changingConfig)
             handleVolley();
@@ -103,12 +113,22 @@ public class MainActivity extends AppCompatActivity
         } else {
             outState.putBoolean(IS_CHANGING_CONFIGURATIONS, false);
         }
+        outState.putBoolean("isPlaying", isPlaying);
+        outState.putString("songName", songName);
+        outState.putString("artistName", artistName);
+        outState.putString("coverImage", coverImage);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(INTENT_FILTER));
+        musicPlayerUI.hidePlayerControls();
+        Log.d("Is Playing", "" + isPlaying);
+        if(isPlaying) {
+            musicPlayerUI.showPlayerControls();
+            musicPlayerUI.populateSongInfo(songName, artistName, coverImage);
+        }
     }
 
     @Override
@@ -123,9 +143,6 @@ public class MainActivity extends AppCompatActivity
             int event = intent.getIntExtra(ServiceMusicPlayer.SERVICE_EVENT_MESSAGE, 0);
             switch(event) {
                 case PLAYER_STARTED:
-                    String songName;
-                    String artistName;
-                    String coverImage = null;
                     try {
                         songName = mResponse.getString("name");
                     } catch (JSONException e) {
@@ -143,7 +160,8 @@ public class MainActivity extends AppCompatActivity
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
-                    musicPlayerUI.notifyUIUpdate(songName, artistName, coverImage);
+                    musicPlayerUI.populateSongInfo(songName, artistName, coverImage);
+                    musicPlayerUI.showPlayerControls();
                     break;
                 case PLAYER_COMPLETED:
                     handleVolley();
@@ -230,7 +248,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void handlePlayButton() {
+    public void togglePlayButton() {
         if (isPlaying) {
             sendLocalBroadcast(ServiceMusicPlayer.PAUSE);
             musicPlayerUI.setPlayButton();
@@ -243,13 +261,18 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void handleForward() {
-        sendLocalBroadcast(ServiceMusicPlayer.FORWARD);
+    public void startSeek() {
+        sendLocalBroadcast(ServiceMusicPlayer.START_SEEK);
     }
 
     @Override
-    public void handleBack() {
-        sendLocalBroadcast(ServiceMusicPlayer.BACK);
+    public void stopSeekForward() {
+        sendLocalBroadcast(ServiceMusicPlayer.STOP_SEEK_FORWARD);
+    }
+
+    @Override
+    public void stopSeekBack() {
+        sendLocalBroadcast(ServiceMusicPlayer.STOP_SEEK_BACK);
     }
 
     @Override
@@ -265,7 +288,8 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onDestroy() {
         super.onDestroy();
-        sendLocalBroadcast(ServiceMusicPlayer.STOP);
+        if(!isChangingConfigurations())
+            sendLocalBroadcast(ServiceMusicPlayer.STOP);
     }
 
     private void sendLocalBroadcast(int msg) {

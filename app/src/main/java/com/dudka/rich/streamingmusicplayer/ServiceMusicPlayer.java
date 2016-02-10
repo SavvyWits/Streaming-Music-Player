@@ -26,7 +26,6 @@ import android.media.MediaPlayer;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
-import android.util.Log;
 
 public class ServiceMusicPlayer extends Service
         implements MediaPlayer.OnPreparedListener,
@@ -38,10 +37,14 @@ public class ServiceMusicPlayer extends Service
     public static final int PLAY = 0x0;
     public static final int PAUSE = 0x1;
     public static final int STOP = 0x2;
-    public static final int FORWARD = 0x3;
-    public static final int BACK = 0x4;
+    public static final int START_SEEK = 0x3;
+    public static final int STOP_SEEK_FORWARD = 0x4;
+    public static final int STOP_SEEK_BACK = 0x5;
 
-    MediaPlayer player;
+    private int duration;
+    private long seekStartTime = 0;
+
+    private MediaPlayer player;
 
     @Override
     public void onCreate() {
@@ -50,6 +53,7 @@ public class ServiceMusicPlayer extends Service
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startID) {
+        duration = intent.getIntExtra("duration", 0);
         String mediaFile = intent.getStringExtra("media_file");
         try {
             player = new MediaPlayer();
@@ -70,6 +74,11 @@ public class ServiceMusicPlayer extends Service
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            long seekStopTime;
+            long totalSeekTime;
+            int adjustedSeek;
+            int seekSpeed = 10;
+
             int event = intent.getIntExtra(MainActivity.ACTIVITY_EVENT_MESSAGE, 0);
             switch(event) {
                 case PLAY:
@@ -89,9 +98,31 @@ public class ServiceMusicPlayer extends Service
                     }
                     stopSelf();
                     break;
-                case FORWARD:
+                case START_SEEK:
+                    player.pause();
+                    seekStartTime = System.currentTimeMillis();
                     break;
-                case BACK:
+                case STOP_SEEK_FORWARD:
+                    seekStopTime = System.currentTimeMillis();
+                    totalSeekTime = seekStopTime - seekStartTime;
+                    adjustedSeek = seekSpeed * (int)totalSeekTime;
+                    if(adjustedSeek < duration - player.getCurrentPosition()) {
+                        player.seekTo(player.getCurrentPosition() + adjustedSeek);
+                    } else {
+                        player.seekTo(duration);
+                    }
+                    player.start();
+                    break;
+                case STOP_SEEK_BACK:
+                    seekStopTime = System.currentTimeMillis();
+                    totalSeekTime = seekStopTime - seekStartTime;
+                    adjustedSeek = seekSpeed * (int)totalSeekTime;
+                    if(player.getCurrentPosition() - adjustedSeek > 0) {
+                        player.seekTo(player.getCurrentPosition() - adjustedSeek);
+                    } else {
+                        player.seekTo(0);
+                    }
+                    player.start();
                     break;
                 default:
                     if(player != null) {

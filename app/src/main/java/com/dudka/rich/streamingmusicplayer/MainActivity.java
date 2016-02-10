@@ -56,8 +56,7 @@ public class MainActivity extends AppCompatActivity
 
     private static final String IS_CHANGING_CONFIGURATIONS = "isChangingConfigurations";
 
-    //String url = "YOUR END POINT GOES HERE";
-    String url = "http://streaming.earbits.com/api/v1/track.json?stream_id=5654d7c3c5aa6e00030021aa";
+    String url = "YOUR END POINT GOES HERE";
     String fragmentTag = "fragmentMusicPlayerUI";
 
     boolean isPlaying = false;

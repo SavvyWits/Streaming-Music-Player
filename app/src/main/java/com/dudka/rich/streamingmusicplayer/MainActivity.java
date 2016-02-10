@@ -27,7 +27,6 @@ import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.view.View;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -64,8 +63,6 @@ public class MainActivity extends AppCompatActivity
     String artistName;
     String coverImage = null;
 
-    View progressBar;
-
     FragmentMusicPlayerUI musicPlayerUI;
 
     @Override
@@ -74,8 +71,6 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
 
         Fresco.initialize(this);
-
-        progressBar = findViewById(R.id.progress_bar);
 
         FragmentManager fm = getSupportFragmentManager();
         musicPlayerUI = (FragmentMusicPlayerUI) fm.findFragmentByTag(fragmentTag);
@@ -200,14 +195,11 @@ public class MainActivity extends AppCompatActivity
                         intent.putExtra("media_file", mediaFile);
                         intent.putExtra("duration", duration);
                         startService(intent);
-
-                        progressBar.setVisibility(View.GONE);
                     }
                 }, new Response.ErrorListener() {
 
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        progressBar.setVisibility(View.GONE);
                         handleNetworkError();
                     }
                 });

@@ -31,12 +31,8 @@ public class ApplicationTest {
     public ActivityTestRule<MainActivity> mActivityRule = new ActivityTestRule<MainActivity>(MainActivity.class);
 
     @Test
-    public void checkViewsDisplayed() {
-        onView(withId(R.id.progress_bar))
-                .check(matches(isDisplayed()));
-        onView(withId(R.id.title))
-                .check(matches(isDisplayed()));
-        onView(withId(R.id.title)).check(matches(withText(R.string.app_name)));
+    public void checkInitialViewsDisplayed() {
+        onView(withId(R.id.title)).check(matches(isDisplayed()));
         onView(withId(R.id.artist)).check(matches(isDisplayed()));
         onView(withId(R.id.preparing_progress)).check(matches(isDisplayed()));
         onView(withId(R.id.quit)).check(matches(isDisplayed()));
